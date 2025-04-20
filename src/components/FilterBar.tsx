@@ -34,8 +34,11 @@ const FilterBar: React.FC<FilterBarProps> = ({ onFilterChange, maxPrice = 2000 }
     onFilterChange(updatedFilters);
   };
 
-  const handleTypeChange = (value: PropertyType) => {
-    const updatedFilters = { ...filters, type: value };
+  const handleTypeChange = (value: PropertyType | 'any') => {
+    const updatedFilters = { 
+      ...filters, 
+      type: value === 'any' ? undefined : value as PropertyType 
+    };
     setFilters(updatedFilters);
     onFilterChange(updatedFilters);
   };
@@ -84,14 +87,14 @@ const FilterBar: React.FC<FilterBarProps> = ({ onFilterChange, maxPrice = 2000 }
             Property Type
           </label>
           <Select
-            value={filters.type}
-            onValueChange={(value: PropertyType) => handleTypeChange(value)}
+            value={filters.type || 'any'}
+            onValueChange={(value: string) => handleTypeChange(value as PropertyType | 'any')}
           >
             <SelectTrigger id="type">
               <SelectValue placeholder="Any type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Any type</SelectItem>
+              <SelectItem value="any">Any type</SelectItem>
               {propertyTypes.map((type) => (
                 <SelectItem key={type} value={type}>
                   {type.charAt(0).toUpperCase() + type.slice(1)}
