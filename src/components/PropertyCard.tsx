@@ -1,9 +1,12 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Property } from '@/data/properties';
 import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { Heart } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface PropertyCardProps {
   property: Property;
@@ -13,6 +16,60 @@ interface PropertyCardProps {
 
 const PropertyCard: React.FC<PropertyCardProps> = ({ property, className, featured = false }) => {
   const { convertPrice } = useApp();
+  const { isAuthenticated, user } = useAuth();
+  const [isLiked, setIsLiked] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const checkWishlist = async () => {
+        const { data } = await supabase
+          .from('wishlists')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('property_id', property.id)
+          .single();
+        
+        setIsLiked(!!data);
+      };
+
+      checkWishlist();
+    }
+  }, [isAuthenticated, user, property.id]);
+
+  const toggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation
+
+    if (!isAuthenticated) {
+      toast.error('Please log in to save properties to your wishlist');
+      return;
+    }
+
+    try {
+      if (isLiked) {
+        await supabase
+          .from('wishlists')
+          .delete()
+          .eq('user_id', user!.id)
+          .eq('property_id', property.id);
+        
+        toast.success('Removed from wishlist');
+      } else {
+        await supabase
+          .from('wishlists')
+          .insert({
+            user_id: user!.id,
+            property_id: property.id
+          });
+        
+        toast.success('Added to wishlist');
+      }
+
+      setIsLiked(!isLiked);
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+      toast.error('Failed to update wishlist');
+    }
+  };
 
   return (
     <Link 
@@ -35,6 +92,21 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property, className, featur
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 text-white">
           <div className="font-medium">{property.location}</div>
         </div>
+        <button
+          onClick={toggleWishlist}
+          className={cn(
+            "absolute top-4 right-4 p-2 rounded-full",
+            "bg-white/90 hover:bg-white transition-colors",
+            "focus:outline-none focus:ring-2 focus:ring-gold-dark"
+          )}
+        >
+          <Heart
+            className={cn(
+              "w-5 h-5 transition-colors",
+              isLiked ? "fill-red-500 text-red-500" : "text-gray-600"
+            )}
+          />
+        </button>
       </div>
       <div className="p-4">
         <h3 className="font-playfair text-lg font-semibold mb-1">{property.name}</h3>

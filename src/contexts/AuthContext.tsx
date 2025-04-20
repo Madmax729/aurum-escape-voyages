@@ -1,126 +1,139 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Session, User } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 
 export type UserRole = 'admin' | 'user';
 
-export interface User {
+export interface UserProfile {
   id: string;
   name: string;
   email: string;
   phone: string;
   city: string;
   role: UserRole;
+  avatar_url?: string;
 }
 
 interface AuthContextType {
   user: User | null;
+  profile: UserProfile | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, phone: string, city: string, role: UserRole) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user data for development
-const mockUsers = [
-  {
-    id: '1',
-    name: 'Admin User',
-    email: 'admin@example.com',
-    password: 'password',
-    phone: '123-456-7890',
-    city: 'New York',
-    role: 'admin' as UserRole
-  },
-  {
-    id: '2',
-    name: 'Regular User',
-    email: 'user@example.com',
-    password: 'password',
-    phone: '098-765-4321',
-    city: 'Los Angeles',
-    role: 'user' as UserRole
-  }
-];
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check if user is stored in localStorage on initial load
   useEffect(() => {
-    const storedUser = localStorage.getItem('aurumUser');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
-        localStorage.removeItem('aurumUser');
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsAuthenticated(!!session?.user);
+
+        // Fetch user profile if session exists
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          setProfile(profile);
+        } else {
+          setProfile(null);
+        }
       }
-    }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsAuthenticated(!!session?.user);
+
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            setProfile(profile);
+          });
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const foundUser = mockUsers.find(u => u.email === email && u.password === password);
-    
-    if (foundUser) {
-      const { password, ...userWithoutPassword } = foundUser;
-      setUser(userWithoutPassword);
-      setIsAuthenticated(true);
-      localStorage.setItem('aurumUser', JSON.stringify(userWithoutPassword));
-      toast.success('Logged in successfully');
-    } else {
-      toast.error('Invalid email or password');
-      throw new Error('Invalid email or password');
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      toast.error(error.message);
+      throw error;
     }
+
+    toast.success('Logged in successfully');
   };
 
   const register = async (name: string, email: string, password: string, phone: string, city: string, role: UserRole) => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Check if user already exists
-    if (mockUsers.some(u => u.email === email)) {
-      toast.error('User with this email already exists');
-      throw new Error('User with this email already exists');
-    }
-    
-    // In a real app, this would be an API call to register the user
-    const newUser = {
-      id: String(mockUsers.length + 1),
-      name,
+    const { error } = await supabase.auth.signUp({
       email,
       password,
-      phone,
-      city,
-      role
-    };
-    
-    mockUsers.push(newUser);
-    const { password: _, ...userWithoutPassword } = newUser;
-    
-    setUser(userWithoutPassword);
-    setIsAuthenticated(true);
-    localStorage.setItem('aurumUser', JSON.stringify(userWithoutPassword));
-    toast.success('Registered successfully');
+      options: {
+        data: {
+          name,
+          phone,
+          city,
+          role,
+        },
+      },
+    });
+
+    if (error) {
+      toast.error(error.message);
+      throw error;
+    }
+
+    toast.success('Registration successful! Please check your email for verification.');
   };
 
-  const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem('aurumUser');
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error(error.message);
+      throw error;
+    }
+    
     toast.success('Logged out successfully');
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, register, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile, 
+      isAuthenticated, 
+      login, 
+      register, 
+      logout 
+    }}>
       {children}
     </AuthContext.Provider>
   );
