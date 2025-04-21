@@ -162,13 +162,13 @@ const PropertyDetail = () => {
     
     if (property && profile) {
       try {
-        const booking = createBooking(property.id, profile.id, startDate, endDate, guests);
+        const booking = createBooking(profile.id, property.id, startDate, endDate, guests);
         
         // Create booking receipt
         setBookingReceipt({
           bookingId: booking.id,
           propertyName: property.name,
-          location: `${property.location}, ${property.country}`,
+          location: `${property.location.address}, ${property.location.city}`,
           checkIn: startDate.toLocaleDateString(),
           checkOut: endDate.toLocaleDateString(),
           guests: guests,
@@ -227,7 +227,7 @@ const PropertyDetail = () => {
             </Button>
           </div>
           <div className="flex items-center text-gray-600 mb-4">
-            <span>{property.location}, {property.country}</span>
+            <span>{property.location.address}, {property.location.city}</span>
             <span className="mx-2">•</span>
             <div className="flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-gold-dark">
@@ -341,7 +341,7 @@ const PropertyDetail = () => {
               
               <TabsContent value="map" className="animate-fade-in">
                 <h2 className="text-xl font-bold mb-4">Location</h2>
-                <p className="text-gray-600 mb-4">Explore the area around {property.name} in {property.location}, {property.country}.</p>
+                <p className="text-gray-600 mb-4">Explore the area around {property.name} in {property.location.city}, {property.country}.</p>
                 <MapView properties={[property]} />
               </TabsContent>
             </Tabs>

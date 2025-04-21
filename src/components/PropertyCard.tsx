@@ -125,7 +125,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
             </div>
           </div>
           
-          <p className="text-gray-600 text-sm mt-1 truncate">{property.location}, {property.country}</p>
+          <p className="text-gray-600 text-sm mt-1 truncate">{property.location.city}, {property.country}</p>
           
           <div className="flex items-center mt-2 text-sm text-gray-500">
             <span>{property.bedrooms} {property.bedrooms === 1 ? 'bed' : 'beds'}</span>
