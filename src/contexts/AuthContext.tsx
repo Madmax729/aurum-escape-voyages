@@ -23,6 +23,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, phone: string, city: string, role: UserRole) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  uploadAvatar: (file: File) => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,13 +45,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Fetch user profile if session exists
         if (session?.user) {
-          const { data: profile } = await supabase
+          const { data } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
           
-          setProfile(profile);
+          if (data) {
+            setProfile({
+              id: data.id,
+              name: data.name,
+              email: data.email,
+              phone: data.phone,
+              city: data.city,
+              role: data.role as UserRole,
+              avatar_url: data.avatar_url
+            });
+          }
         } else {
           setProfile(null);
         }
@@ -68,8 +80,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select('*')
           .eq('id', session.user.id)
           .single()
-          .then(({ data: profile }) => {
-            setProfile(profile);
+          .then(({ data }) => {
+            if (data) {
+              setProfile({
+                id: data.id,
+                name: data.name,
+                email: data.email,
+                phone: data.phone,
+                city: data.city,
+                role: data.role as UserRole,
+                avatar_url: data.avatar_url
+              });
+            }
           });
       }
     });
@@ -125,6 +147,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toast.success('Logged out successfully');
   };
 
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', user.id);
+
+    if (error) {
+      toast.error(`Error updating profile: ${error.message}`);
+      throw error;
+    }
+
+    if (profile) {
+      setProfile({ ...profile, ...updates });
+    }
+
+    toast.success('Profile updated successfully');
+  };
+
+  const uploadAvatar = async (file: File): Promise<string | null> => {
+    if (!user) return null;
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}-avatar.${fileExt}`;
+    const filePath = `${user.id}/${fileName}`;
+
+    const { error } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file, { upsert: true });
+
+    if (error) {
+      toast.error(`Error uploading avatar: ${error.message}`);
+      return null;
+    }
+
+    const { data } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    // Update profile with new avatar URL
+    await updateProfile({ avatar_url: data.publicUrl });
+    
+    return data.publicUrl;
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -132,7 +200,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isAuthenticated, 
       login, 
       register, 
-      logout 
+      logout,
+      updateProfile,
+      uploadAvatar
     }}>
       {children}
     </AuthContext.Provider>

@@ -6,9 +6,10 @@ import PropertyGrid from '@/components/PropertyGrid';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Property, getPropertyById } from '@/data/properties';
+import { toast } from 'sonner';
 
 const Wishlist = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, profile } = useAuth();
   const [wishlistProperties, setWishlistProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -20,28 +21,36 @@ const Wishlist = () => {
     }
 
     const fetchWishlist = async () => {
-      if (!user) return;
+      if (!profile) return;
 
-      const { data: wishlistItems, error } = await supabase
-        .from('wishlists')
-        .select('*')
-        .eq('user_id', user.id);
+      try {
+        const { data: wishlistItems, error } = await supabase
+          .from('wishlists')
+          .select('*')
+          .eq('user_id', profile.id);
 
-      if (error) {
-        console.error('Error fetching wishlist:', error);
-        return;
+        if (error) {
+          console.error('Error fetching wishlist:', error);
+          toast.error('Failed to load wishlist');
+          setLoading(false);
+          return;
+        }
+
+        const properties = wishlistItems
+          .map(item => getPropertyById(item.property_id))
+          .filter((property): property is Property => property !== undefined);
+
+        setWishlistProperties(properties);
+      } catch (err) {
+        console.error('Error in wishlist fetch:', err);
+        toast.error('Failed to load wishlist');
+      } finally {
+        setLoading(false);
       }
-
-      const properties = wishlistItems
-        .map(item => getPropertyById(item.property_id))
-        .filter((property): property is Property => property !== undefined);
-
-      setWishlistProperties(properties);
-      setLoading(false);
     };
 
     fetchWishlist();
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, profile, navigate]);
 
   if (loading) {
     return (

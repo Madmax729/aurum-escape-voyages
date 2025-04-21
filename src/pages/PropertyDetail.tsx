@@ -24,14 +24,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Heart } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import QRCode from '@/components/QRCode';
+import MapView from '@/components/MapView';
 
 const PropertyDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, profile } = useAuth();
   const { convertPrice } = useApp();
   const navigate = useNavigate();
   
@@ -40,7 +52,11 @@ const PropertyDetail = () => {
   const [dateRange, setDateRange] = useState<[Date | undefined, Date | undefined]>([undefined, undefined]);
   const [guests, setGuests] = useState(1);
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
-  
+  const [receiptSheetOpen, setReceiptSheetOpen] = useState(false);
+  const [bookingReceipt, setBookingReceipt] = useState<any>(null);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isWishlistLoading, setIsWishlistLoading] = useState(false);
+
   const [startDate, endDate] = dateRange;
 
   // Calculate number of nights and total price
@@ -62,6 +78,71 @@ const PropertyDetail = () => {
     }
   }, [id, navigate]);
 
+  // Check if property is in user's wishlist
+  useEffect(() => {
+    if (!isAuthenticated || !profile || !id) return;
+
+    const checkWishlist = async () => {
+      const { data, error } = await supabase
+        .from('wishlists')
+        .select('id')
+        .eq('user_id', profile.id)
+        .eq('property_id', id)
+        .single();
+
+      if (!error && data) {
+        setIsWishlisted(true);
+      }
+    };
+
+    checkWishlist();
+  }, [isAuthenticated, profile, id]);
+
+  const toggleWishlist = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to save to wishlist');
+      navigate('/login');
+      return;
+    }
+
+    if (isWishlistLoading || !id) return;
+    setIsWishlistLoading(true);
+
+    try {
+      if (isWishlisted) {
+        // Remove from wishlist
+        const { error } = await supabase
+          .from('wishlists')
+          .delete()
+          .eq('user_id', profile?.id)
+          .eq('property_id', id);
+
+        if (error) throw error;
+        
+        setIsWishlisted(false);
+        toast.success('Removed from wishlist');
+      } else {
+        // Add to wishlist
+        const { error } = await supabase
+          .from('wishlists')
+          .insert({
+            user_id: profile?.id,
+            property_id: id
+          });
+
+        if (error) throw error;
+        
+        setIsWishlisted(true);
+        toast.success('Added to wishlist');
+      }
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
+      toast.error('Failed to update wishlist');
+    } finally {
+      setIsWishlistLoading(false);
+    }
+  };
+
   const handleBookNow = () => {
     if (!isAuthenticated) {
       toast.error('Please log in to book a property');
@@ -79,19 +160,43 @@ const PropertyDetail = () => {
       return;
     }
     
-    if (property && user) {
+    if (property && profile) {
       try {
-        createBooking(property.id, user.id, startDate, endDate, guests);
+        const booking = createBooking(property.id, profile.id, startDate, endDate, guests);
+        
+        // Create booking receipt
+        setBookingReceipt({
+          bookingId: booking.id,
+          propertyName: property.name,
+          location: `${property.location}, ${property.country}`,
+          checkIn: startDate.toLocaleDateString(),
+          checkOut: endDate.toLocaleDateString(),
+          guests: guests,
+          nights: nights,
+          price: property.price,
+          totalPrice: totalPrice,
+          bookingDate: new Date().toLocaleDateString(),
+          customerName: profile.name,
+          customerEmail: profile.email
+        });
+        
         toast.success('Booking successful!');
         setBookingDialogOpen(false);
-        
-        // Redirect to trips page
-        navigate('/trips');
+        setReceiptSheetOpen(true);
       } catch (error) {
         toast.error('Failed to create booking. Please try again.');
         console.error('Booking error:', error);
       }
     }
+  };
+
+  const generateReceiptQRData = () => {
+    if (!bookingReceipt) return '';
+    
+    return JSON.stringify({
+      type: 'booking_receipt',
+      ...bookingReceipt
+    });
   };
 
   if (!property) {
@@ -108,7 +213,19 @@ const PropertyDetail = () => {
     <Layout>
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="font-playfair text-3xl md:text-4xl font-bold mb-2">{property.name}</h1>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <h1 className="font-playfair text-3xl md:text-4xl font-bold">{property.name}</h1>
+            <Button
+              variant="outline"
+              size="sm"
+              className={`flex items-center gap-2 ${isWishlisted ? 'text-red-500' : ''}`}
+              onClick={toggleWishlist}
+              disabled={isWishlistLoading}
+            >
+              <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-current' : ''}`} />
+              {isWishlisted ? 'Saved' : 'Save to Wishlist'}
+            </Button>
+          </div>
           <div className="flex items-center text-gray-600 mb-4">
             <span>{property.location}, {property.country}</span>
             <span className="mx-2">•</span>
@@ -152,6 +269,7 @@ const PropertyDetail = () => {
                 <TabsTrigger value="details">Details</TabsTrigger>
                 <TabsTrigger value="amenities">Amenities</TabsTrigger>
                 <TabsTrigger value="host">Host</TabsTrigger>
+                <TabsTrigger value="map">Location</TabsTrigger>
               </TabsList>
               
               <TabsContent value="details" className="animate-fade-in">
@@ -219,6 +337,12 @@ const PropertyDetail = () => {
                   <div className="font-medium mb-2">Response rate</div>
                   <div className="text-gray-600">100% within a few hours</div>
                 </div>
+              </TabsContent>
+              
+              <TabsContent value="map" className="animate-fade-in">
+                <h2 className="text-xl font-bold mb-4">Location</h2>
+                <p className="text-gray-600 mb-4">Explore the area around {property.name} in {property.location}, {property.country}.</p>
+                <MapView properties={[property]} />
               </TabsContent>
             </Tabs>
           </div>
@@ -338,6 +462,84 @@ const PropertyDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Booking Receipt Sheet */}
+      <Sheet open={receiptSheetOpen} onOpenChange={setReceiptSheetOpen}>
+        <SheetContent className="w-full sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>Booking Confirmation</SheetTitle>
+            <SheetDescription>Your booking details and receipt</SheetDescription>
+          </SheetHeader>
+          
+          {bookingReceipt && (
+            <div className="mt-6 space-y-6">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-bold text-lg mb-2">{bookingReceipt.propertyName}</h3>
+                <p className="text-gray-600">{bookingReceipt.location}</p>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm text-gray-500">Check-in</h4>
+                    <p className="font-medium">{bookingReceipt.checkIn}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm text-gray-500">Check-out</h4>
+                    <p className="font-medium">{bookingReceipt.checkOut}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm text-gray-500">Guests</h4>
+                  <p className="font-medium">{bookingReceipt.guests} guest{bookingReceipt.guests !== 1 ? 's' : ''}</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm text-gray-500">Booking ID</h4>
+                  <p className="font-medium">{bookingReceipt.bookingId}</p>
+                </div>
+              </div>
+              
+              <div className="border-t pt-4">
+                <h3 className="font-bold mb-3">Price Details</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">{convertPrice(bookingReceipt.price)} x {bookingReceipt.nights} night{bookingReceipt.nights !== 1 ? 's' : ''}</span>
+                    <span>{convertPrice(bookingReceipt.totalPrice)}</span>
+                  </div>
+                  <div className="border-t pt-2 mt-2 flex justify-between font-bold">
+                    <span>Total</span>
+                    <span>{convertPrice(bookingReceipt.totalPrice)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-center justify-center pt-4 border-t">
+                <h3 className="font-bold mb-3">Booking QR Code</h3>
+                <div className="bg-white p-2 rounded-lg shadow-md">
+                  <QRCode 
+                    value={generateReceiptQRData()} 
+                    size={200}
+                  />
+                </div>
+                <p className="text-sm text-gray-500 mt-2 text-center">
+                  Scan this code at check-in or save for your records
+                </p>
+              </div>
+              
+              <div className="flex justify-center pt-4">
+                <Button onClick={() => {
+                  setReceiptSheetOpen(false);
+                  navigate('/trips');
+                }}>
+                  View All Trips
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </Layout>
   );
 };

@@ -13,10 +13,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, LogOut, Menu, X } from 'lucide-react';
+import { User, LogOut, Menu, X, Heart } from 'lucide-react';
 
 const Navbar: React.FC = () => {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, profile, logout } = useAuth();
   const { currency, setCurrency, exchangeRates } = useApp();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -39,15 +39,20 @@ const Navbar: React.FC = () => {
           <Link to="/properties" className="text-gray-600 hover:text-gold-dark transition-colors">
             Explore
           </Link>
-          {isAuthenticated && user?.role === 'admin' && (
+          {isAuthenticated && profile?.role === 'admin' && (
             <Link to="/admin/dashboard" className="text-gray-600 hover:text-gold-dark transition-colors">
               Admin Dashboard
             </Link>
           )}
           {isAuthenticated && (
-            <Link to="/trips" className="text-gray-600 hover:text-gold-dark transition-colors">
-              My Trips
-            </Link>
+            <>
+              <Link to="/trips" className="text-gray-600 hover:text-gold-dark transition-colors">
+                My Trips
+              </Link>
+              <Link to="/wishlist" className="text-gray-600 hover:text-gold-dark transition-colors flex items-center">
+                <Heart size={18} className="mr-1" /> Wishlist
+              </Link>
+            </>
           )}
         </nav>
 
@@ -75,13 +80,13 @@ const Navbar: React.FC = () => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user?.role === 'admin' ? "https://randomuser.me/api/portraits/women/44.jpg" : "https://randomuser.me/api/portraits/men/42.jpg"} alt={user?.name} />
-                    <AvatarFallback>{user?.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={profile?.avatar_url || (profile?.role === 'admin' ? "https://randomuser.me/api/portraits/women/44.jpg" : "https://randomuser.me/api/portraits/men/42.jpg")} alt={profile?.name} />
+                    <AvatarFallback>{profile?.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{user?.name}</DropdownMenuLabel>
+                <DropdownMenuLabel>{profile?.name}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <User className="mr-2 h-4 w-4" />
@@ -89,6 +94,10 @@ const Navbar: React.FC = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/trips')}>
                   My Trips
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/wishlist')}>
+                  <Heart className="mr-2 h-4 w-4" />
+                  Wishlist
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout}>
@@ -130,7 +139,7 @@ const Navbar: React.FC = () => {
             >
               Explore
             </Link>
-            {isAuthenticated && user?.role === 'admin' && (
+            {isAuthenticated && profile?.role === 'admin' && (
               <Link 
                 to="/admin/dashboard" 
                 className="text-gray-600 hover:text-gold-dark transition-colors py-2"
@@ -140,13 +149,22 @@ const Navbar: React.FC = () => {
               </Link>
             )}
             {isAuthenticated && (
-              <Link 
-                to="/trips" 
-                className="text-gray-600 hover:text-gold-dark transition-colors py-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                My Trips
-              </Link>
+              <>
+                <Link 
+                  to="/trips" 
+                  className="text-gray-600 hover:text-gold-dark transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  My Trips
+                </Link>
+                <Link 
+                  to="/wishlist" 
+                  className="text-gray-600 hover:text-gold-dark transition-colors py-2"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Heart size={18} className="mr-1 inline" /> Wishlist
+                </Link>
+              </>
             )}
             <div className="pt-2 border-t border-gray-200">
               <DropdownMenu>

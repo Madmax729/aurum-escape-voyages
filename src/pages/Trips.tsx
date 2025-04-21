@@ -14,18 +14,22 @@ import {
   TabsTrigger 
 } from '@/components/ui/tabs';
 import { format } from 'date-fns';
+import { useTiltNavigation } from '@/hooks/useTiltNavigation';
 
 interface EnhancedBooking extends Booking {
   property: Property;
 }
 
 const Trips = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, profile } = useAuth();
   const { convertPrice } = useApp();
   const navigate = useNavigate();
   
   const [bookings, setBookings] = useState<EnhancedBooking[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Implement tilt navigation from trips to explore page
+  useTiltNavigation('/trips', '/properties');
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -33,14 +37,14 @@ const Trips = () => {
       return;
     }
     
-    if (user) {
+    if (profile) {
       // Load user bookings
-      const userBookings = getUserBookings(user.id);
+      const userBookings = getUserBookings(profile.id);
       setBookings(userBookings);
     }
     
     setLoading(false);
-  }, [isAuthenticated, user, navigate]);
+  }, [isAuthenticated, profile, navigate]);
 
   const upcomingBookings = bookings.filter(booking => booking.status === 'upcoming');
   const pastBookings = bookings.filter(booking => booking.status === 'completed');
@@ -63,6 +67,7 @@ const Trips = () => {
     <Layout>
       <div className="container mx-auto px-4 py-8">
         <h1 className="font-playfair text-3xl md:text-4xl font-bold mb-6">My Trips</h1>
+        <p className="text-gray-600 mb-4">Tilt your device to navigate to the Explore page</p>
         
         <Tabs defaultValue="upcoming" className="mb-8">
           <TabsList>
