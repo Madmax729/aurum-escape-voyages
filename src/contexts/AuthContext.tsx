@@ -158,7 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (name: string, email: string, password: string, phone: string, city: string, role: UserRole) => {
     try {
-      // Create user account using Supabase Auth
+      // Create user account using Supabase Auth with email confirmation enabled
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -169,6 +169,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             city,
             role,
           },
+          // Explicitly enable email confirmation
+          emailRedirectTo: window.location.origin + '/login',
         },
       });
 

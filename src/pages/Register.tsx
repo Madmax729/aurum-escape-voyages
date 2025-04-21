@@ -21,6 +21,7 @@ const Register = () => {
   const [city, setCity] = useState('');
   const [role, setRole] = useState<UserRole>('user');
   const [loading, setLoading] = useState(false);
+  const [registrationComplete, setRegistrationComplete] = useState(false);
   
   const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -54,8 +55,7 @@ const Register = () => {
     
     try {
       await register(name, email, password, phone, city, role);
-      toast.success('Registration successful! Please check your email for confirmation.');
-      navigate('/login');
+      setRegistrationComplete(true);
     } catch (error) {
       console.error('Registration error:', error);
       // Error is already handled in AuthContext
@@ -63,6 +63,34 @@ const Register = () => {
       setLoading(false);
     }
   };
+
+  if (registrationComplete) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
+          <div className="text-center">
+            <Link to="/" className="flex items-center justify-center gap-2 mb-6">
+              <span className="font-playfair text-2xl font-bold text-gold-dark">Aurum</span>
+              <span className="font-playfair text-xl">Escape</span>
+            </Link>
+            <h2 className="mt-6 text-3xl font-playfair font-bold text-gray-900">Registration Successful!</h2>
+            <div className="mt-4 bg-blue-50 p-4 rounded-md text-blue-800">
+              <p>Please check your email for a confirmation link.</p>
+              <p className="mt-2">You need to confirm your email before you can log in.</p>
+            </div>
+            <div className="mt-6">
+              <Button 
+                onClick={() => navigate('/login')} 
+                className="w-full"
+              >
+                Go to Login
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
