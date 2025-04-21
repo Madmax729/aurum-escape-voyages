@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Property, PropertyType } from '@/data/properties';
+import { Property } from '@/data/properties';
 
 // Set your Mapbox access token
 mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHR0Z3B5cXIwMGF1MmptbGVydWF6ZHN0In0.a9QuumijHhaTVbBG2eUHZA';
@@ -27,7 +27,7 @@ const MapView: React.FC<MapViewProps> = ({
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
   // Function to get property color based on type
-  const getPropertyColor = (type: PropertyType): string => {
+  const getPropertyColor = (type: string): string => {
     switch (type) {
       case 'villa':
         return '#FF5A5F';

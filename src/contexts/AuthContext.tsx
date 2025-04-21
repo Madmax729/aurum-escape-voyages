@@ -104,6 +104,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: data.role as UserRole,
           avatar_url: data.avatar_url
         });
+      } else {
+        // Profile doesn't exist yet, create one
+        const newProfile = {
+          id: userId,
+          name: user?.user_metadata?.name || '',
+          email: user?.email || '',
+          phone: user?.user_metadata?.phone || '',
+          city: user?.user_metadata?.city || '',
+          role: (user?.user_metadata?.role as UserRole) || 'user'
+        };
+        
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert(newProfile);
+          
+        if (insertError) {
+          console.error('Error creating profile:', insertError);
+          return;
+        }
+        
+        setProfile(newProfile);
       }
     } catch (err) {
       console.error('Error in fetch profile:', err);
@@ -137,6 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (name: string, email: string, password: string, phone: string, city: string, role: UserRole) => {
     try {
+      // Create user account using Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -158,7 +180,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (data?.user) {
         console.log('Registration successful for user:', data.user.id);
-        toast.success('Registration successful! You can now log in.');
+        
+        // Manually create a profile in the profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            name,
+            email,
+            phone,
+            city,
+            role
+          });
+          
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          toast.error('Account created but profile setup failed. Please contact support.');
+        } else {
+          toast.success('Registration successful! Check your email for confirmation.');
+        }
         return;
       }
     } catch (error) {

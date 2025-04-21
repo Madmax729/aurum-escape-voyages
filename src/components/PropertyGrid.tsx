@@ -38,7 +38,6 @@ const PropertyGrid: React.FC<PropertyGridProps> = ({
           <PropertyCard 
             key={property.id} 
             property={property} 
-            featured={featured && property.featured}
           />
         ))}
       </div>

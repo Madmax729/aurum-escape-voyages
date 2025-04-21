@@ -54,7 +54,7 @@ const Register = () => {
     
     try {
       await register(name, email, password, phone, city, role);
-      toast.success('Registration successful! Please log in.');
+      toast.success('Registration successful! Please check your email for confirmation.');
       navigate('/login');
     } catch (error) {
       console.error('Registration error:', error);
