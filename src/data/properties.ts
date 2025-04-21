@@ -1,12 +1,20 @@
 
-export type PropertyType = 'villa' | 'cabin' | 'cottage' | 'apartment' | 'hostel' | 'hotel';
+export type PropertyType = 'villa' | 'cabin' | 'cottage' | 'apartment' | 'hostel' | 'hotel' | 'house' | 'penthouse' | 'resort';
+
+export interface Location {
+  address: string;
+  city: string;
+  country?: string;
+  longitude: number;
+  latitude: number;
+}
 
 export interface Property {
   id: string;
   name: string;
   description: string;
   price: number;
-  location: string;
+  location: Location;
   country: string;
   type: PropertyType;
   bedrooms: number;
@@ -31,7 +39,12 @@ export const properties: Property[] = [
     name: 'Luxury Oceanfront Villa',
     description: 'Exquisite villa with panoramic ocean views, private infinity pool, and direct beach access. Perfect for a luxurious getaway.',
     price: 1200,
-    location: 'Malibu, California',
+    location: {
+      address: 'Ocean Drive',
+      city: 'Malibu',
+      longitude: -118.7798,
+      latitude: 34.0259
+    },
     country: 'United States',
     type: 'villa',
     bedrooms: 5,
@@ -57,7 +70,12 @@ export const properties: Property[] = [
     name: 'Mountain Retreat Cabin',
     description: 'Secluded cabin nestled in the mountains with breathtaking views. Featuring a hot tub, fireplace, and modern amenities.',
     price: 350,
-    location: 'Aspen, Colorado',
+    location: {
+      address: 'Mountain View Road',
+      city: 'Aspen',
+      longitude: -106.8317,
+      latitude: 39.1911
+    },
     country: 'United States',
     type: 'cabin',
     bedrooms: 3,
@@ -82,7 +100,12 @@ export const properties: Property[] = [
     name: 'Tuscan Countryside Villa',
     description: 'Authentic Tuscan villa surrounded by vineyards and olive groves. Experience the Italian dolce vita with wine tastings and local cuisine.',
     price: 800,
-    location: 'Siena, Tuscany',
+    location: {
+      address: 'Via del Chianti',
+      city: 'Siena',
+      longitude: 11.3301,
+      latitude: 43.3228
+    },
     country: 'Italy',
     type: 'villa',
     bedrooms: 4,
@@ -108,7 +131,12 @@ export const properties: Property[] = [
     name: 'Cozy Lakeside Cottage',
     description: 'Charming cottage with direct access to a pristine lake. Perfect for a peaceful retreat with fishing, swimming, and relaxation.',
     price: 275,
-    location: 'Lake Tahoe',
+    location: {
+      address: 'Lakeview Drive',
+      city: 'Lake Tahoe',
+      longitude: -120.0324,
+      latitude: 39.0968
+    },
     country: 'United States',
     type: 'cottage',
     bedrooms: 2,
@@ -133,7 +161,12 @@ export const properties: Property[] = [
     name: 'Luxury Penthouse Apartment',
     description: 'Elegant penthouse with stunning city views. Features a private terrace, modern art, and premium amenities in the heart of downtown.',
     price: 600,
-    location: 'New York City',
+    location: {
+      address: '5th Avenue',
+      city: 'New York City',
+      longitude: -73.9654,
+      latitude: 40.7829
+    },
     country: 'United States',
     type: 'apartment',
     bedrooms: 3,
@@ -158,7 +191,12 @@ export const properties: Property[] = [
     name: 'Tropical Beach Villa',
     description: 'Exquisite beachfront villa with private pool and tropical garden. Experience paradise with direct access to pristine white sand beaches.',
     price: 950,
-    location: 'Bali',
+    location: {
+      address: 'Beach Road',
+      city: 'Kuta',
+      longitude: 115.1889,
+      latitude: -8.7214
+    },
     country: 'Indonesia',
     type: 'villa',
     bedrooms: 4,
@@ -184,7 +222,12 @@ export const properties: Property[] = [
     name: 'Alpine Ski Chalet',
     description: 'Luxurious ski-in/ski-out chalet with breathtaking mountain views. Features a sauna, fireplace, and premium amenities for the perfect winter getaway.',
     price: 580,
-    location: 'Zermatt',
+    location: {
+      address: 'Alpine Road',
+      city: 'Zermatt',
+      longitude: 7.7491,
+      latitude: 46.0207
+    },
     country: 'Switzerland',
     type: 'cabin',
     bedrooms: 4,
@@ -209,7 +252,12 @@ export const properties: Property[] = [
     name: 'Historic City Apartment',
     description: 'Elegant apartment in a historic building with original features and modern comforts. Located in the heart of the old town.',
     price: 320,
-    location: 'Prague',
+    location: {
+      address: 'Old Town Square',
+      city: 'Prague',
+      longitude: 14.4213,
+      latitude: 50.0874
+    },
     country: 'Czech Republic',
     type: 'apartment',
     bedrooms: 2,
@@ -251,7 +299,7 @@ export const filterProperties = (options: FilterOptions): Property[] => {
     if (options.search && 
         !property.name.toLowerCase().includes(options.search.toLowerCase()) && 
         !property.description.toLowerCase().includes(options.search.toLowerCase()) &&
-        !property.location.toLowerCase().includes(options.search.toLowerCase())) {
+        !property.location.city.toLowerCase().includes(options.search.toLowerCase())) {
       return false;
     }
     
@@ -270,7 +318,7 @@ export const filterProperties = (options: FilterOptions): Property[] => {
     
     // Filter by location
     if (options.location && 
-        !property.location.toLowerCase().includes(options.location.toLowerCase()) &&
+        !property.location.city.toLowerCase().includes(options.location.toLowerCase()) &&
         !property.country.toLowerCase().includes(options.location.toLowerCase())) {
       return false;
     }

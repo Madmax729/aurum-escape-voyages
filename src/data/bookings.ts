@@ -1,97 +1,102 @@
 
-import { properties } from './properties';
+import { Property, getPropertyById } from '@/data/properties';
+
+export type BookingStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
 
 export interface Booking {
   id: string;
-  propertyId: string;
   userId: string;
+  propertyId: string;
+  property: Property;
   startDate: Date;
   endDate: Date;
-  totalPrice: number;
   guests: number;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  totalPrice: number;
+  status: BookingStatus;
   createdAt: Date;
 }
 
-// Mock booking data
-const mockBookings: Booking[] = [
+// Mock bookings data
+const bookings: Booking[] = [
   {
     id: 'b1',
-    propertyId: '3',
-    userId: '2',
-    startDate: new Date(2025, 5, 15),
-    endDate: new Date(2025, 5, 22),
-    totalPrice: 5600,
+    userId: 'u1',
+    propertyId: '1',
+    property: getPropertyById('1')!,
+    startDate: new Date(new Date().setDate(new Date().getDate() + 30)),
+    endDate: new Date(new Date().setDate(new Date().getDate() + 35)),
     guests: 4,
+    totalPrice: 6000,
     status: 'upcoming',
-    createdAt: new Date(2025, 3, 10)
+    createdAt: new Date(new Date().setDate(new Date().getDate() - 5))
   },
   {
     id: 'b2',
-    propertyId: '6',
-    userId: '2',
-    startDate: new Date(2025, 7, 10),
-    endDate: new Date(2025, 7, 20),
-    totalPrice: 9500,
-    guests: 6,
-    status: 'upcoming',
-    createdAt: new Date(2025, 4, 5)
-  },
-  {
-    id: 'b3',
-    propertyId: '4',
-    userId: '2',
-    startDate: new Date(2025, 1, 5),
-    endDate: new Date(2025, 1, 8),
-    totalPrice: 825,
+    userId: 'u1',
+    propertyId: '3',
+    property: getPropertyById('3')!,
+    startDate: new Date(new Date().setDate(new Date().getDate() - 10)),
+    endDate: new Date(new Date().setDate(new Date().getDate() - 5)),
     guests: 2,
+    totalPrice: 4000,
     status: 'completed',
-    createdAt: new Date(2024, 11, 20)
+    createdAt: new Date(new Date().setDate(new Date().getDate() - 20))
   }
 ];
 
-// Function to get bookings for a user
-export const getUserBookings = (userId: string): (Booking & { property: typeof properties[0] })[] => {
-  return mockBookings
-    .filter(booking => booking.userId === userId)
-    .map(booking => {
-      const property = properties.find(p => p.id === booking.propertyId);
-      return {
-        ...booking,
-        property: property!
-      };
-    });
+// Function to get a user's bookings
+export const getUserBookings = (userId: string): Booking[] => {
+  return bookings.filter(booking => booking.userId === userId);
+};
+
+// Function to get a booking by ID
+export const getBookingById = (id: string): Booking | undefined => {
+  return bookings.find(booking => booking.id === id);
 };
 
 // Function to create a new booking
 export const createBooking = (
-  propertyId: string,
   userId: string,
+  propertyId: string,
   startDate: Date,
   endDate: Date,
   guests: number
-): Booking => {
-  const property = properties.find(p => p.id === propertyId);
+): Booking | null => {
+  const property = getPropertyById(propertyId);
   
   if (!property) {
-    throw new Error('Property not found');
+    return null;
   }
   
-  const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-  const totalPrice = property.price * daysDiff;
+  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const totalPrice = property.price * diffDays;
   
   const newBooking: Booking = {
-    id: `b${mockBookings.length + 1}`,
-    propertyId,
+    id: `b${bookings.length + 1}`,
     userId,
+    propertyId,
+    property,
     startDate,
     endDate,
-    totalPrice,
     guests,
+    totalPrice,
     status: 'upcoming',
     createdAt: new Date()
   };
   
-  mockBookings.push(newBooking);
+  bookings.push(newBooking);
   return newBooking;
+};
+
+// Function to cancel a booking
+export const cancelBooking = (bookingId: string): boolean => {
+  const bookingIndex = bookings.findIndex(b => b.id === bookingId);
+  
+  if (bookingIndex === -1) {
+    return false;
+  }
+  
+  bookings[bookingIndex].status = 'cancelled';
+  return true;
 };

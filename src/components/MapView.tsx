@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Property } from '@/data/properties';
+import { Property, PropertyType } from '@/data/properties';
 
 // Set your Mapbox access token
 mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHR0Z3B5cXIwMGF1MmptbGVydWF6ZHN0In0.a9QuumijHhaTVbBG2eUHZA';
@@ -27,7 +27,7 @@ const MapView: React.FC<MapViewProps> = ({
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
   // Function to get property color based on type
-  const getPropertyColor = (type: string): string => {
+  const getPropertyColor = (type: PropertyType): string => {
     switch (type) {
       case 'villa':
         return '#FF5A5F';
@@ -91,7 +91,7 @@ const MapView: React.FC<MapViewProps> = ({
             .setHTML(`
               <div style="max-width:200px;">
                 <strong>${property.name}</strong>
-                <p>${property.location.address}</p>
+                <p>${property.location.address}, ${property.location.city}</p>
                 <p>$${property.price} per night</p>
               </div>
             `);
