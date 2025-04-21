@@ -36,11 +36,7 @@ const Login = () => {
       // If login is successful, useEffect will handle redirect based on auth state
     } catch (error: any) {
       console.error('Login error:', error);
-      // If the error message indicates email confirmation is required
-      if (error.message?.includes('Email not confirmed')) {
-        toast.error('Please check your email and confirm your account before logging in');
-      }
-      // Error is already handled in AuthContext
+      // The error is already handled in AuthContext, so no need to display it again here
     } finally {
       setLoading(false);
     }

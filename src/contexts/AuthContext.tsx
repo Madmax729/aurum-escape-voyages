@@ -97,34 +97,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data) {
         setProfile({
           id: data.id,
-          name: data.name,
-          email: data.email,
-          phone: data.phone,
-          city: data.city,
-          role: data.role as UserRole,
+          name: data.name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          city: data.city || '',
+          role: (data.role as UserRole) || 'user',
           avatar_url: data.avatar_url
         });
-      } else {
-        // Profile doesn't exist yet, create one
-        const newProfile = {
-          id: userId,
-          name: user?.user_metadata?.name || '',
-          email: user?.email || '',
-          phone: user?.user_metadata?.phone || '',
-          city: user?.user_metadata?.city || '',
-          role: (user?.user_metadata?.role as UserRole) || 'user'
-        };
-        
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert(newProfile);
-          
-        if (insertError) {
-          console.error('Error creating profile:', insertError);
-          return;
-        }
-        
-        setProfile(newProfile);
       }
     } catch (err) {
       console.error('Error in fetch profile:', err);
@@ -140,7 +119,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error('Login error:', error);
-        toast.error(error.message);
+        if (error.message.includes('Email not confirmed')) {
+          toast.error('Please confirm your email before logging in');
+        } else {
+          toast.error(error.message || 'Login failed');
+        }
         throw error;
       }
 
@@ -151,7 +134,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Unexpected login error:', error);
-      toast.error('An unexpected error occurred during login');
       throw error;
     }
   };
@@ -169,38 +151,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             city,
             role,
           },
-          // Explicitly enable email confirmation
-          emailRedirectTo: window.location.origin + '/login',
+          emailRedirectTo: `${window.location.origin}/login`,
         },
       });
 
       if (error) {
         console.error('Registration error:', error);
-        toast.error(error.message);
+        toast.error(error.message || 'Registration failed');
         throw error;
       }
 
       if (data?.user) {
         console.log('Registration successful for user:', data.user.id);
-        
-        // Manually create a profile in the profiles table
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            name,
-            email,
-            phone,
-            city,
-            role
-          });
-          
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-          toast.error('Account created but profile setup failed. Please contact support.');
-        } else {
-          toast.success('Registration successful! Check your email for confirmation.');
-        }
+        toast.success('Registration successful! Check your email for confirmation.');
         return;
       }
     } catch (error) {
