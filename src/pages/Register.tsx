@@ -1,18 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+  RadioGroup,
+  RadioGroupItem
+} from '@/components/ui/radio-group';
 import { UserRole } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -26,8 +22,15 @@ const Register = () => {
   const [role, setRole] = useState<UserRole>('user');
   const [loading, setLoading] = useState(false);
   
-  const { register } = useAuth();
+  const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,10 +54,11 @@ const Register = () => {
     
     try {
       await register(name, email, password, phone, city, role);
-      navigate('/');
+      toast.success('Registration successful! Please log in.');
+      navigate('/login');
     } catch (error) {
-      // Error is already handled in AuthContext
       console.error('Registration error:', error);
+      // Error is already handled in AuthContext
     } finally {
       setLoading(false);
     }

@@ -16,6 +16,8 @@ import Profile from "./pages/Profile";
 import Trips from "./pages/Trips";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import Wishlist from "./pages/Wishlist";
+import AddProperty from "./pages/AddProperty";
 
 const queryClient = new QueryClient();
 
@@ -35,7 +37,9 @@ const App = () => (
               <Route path="/properties/:id" element={<PropertyDetail />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/trips" element={<Trips />} />
+              <Route path="/wishlist" element={<Wishlist />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/add-property" element={<AddProperty />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

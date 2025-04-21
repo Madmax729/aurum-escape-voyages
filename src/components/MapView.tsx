@@ -1,126 +1,155 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Property } from '@/data/properties';
-import { useNavigate } from 'react-router-dom';
-import { useApp } from '@/contexts/AppContext';
+import { Property, PropertyType } from '@/data/properties';
+
+// Set your Mapbox access token
+mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHR0Z3B5cXIwMGF1MmptbGVydWF6ZHN0In0.a9QuumijHhaTVbBG2eUHZA';
 
 interface MapViewProps {
   properties: Property[];
+  onPropertySelect?: (propertyId: string) => void;
+  center?: [number, number];
+  zoom?: number;
+  height?: string;
 }
 
-const MAPBOX_TOKEN = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHR0Z3B5cXIwMGF1MmptbGVydWF6ZHN0In0.a9QuumijHhaTVbBG2eUHZA';
-
-const MapView: React.FC<MapViewProps> = ({ properties }) => {
+const MapView: React.FC<MapViewProps> = ({
+  properties,
+  onPropertySelect,
+  center = [0, 20], // Default center
+  zoom = 1.5,
+  height = '400px',
+}) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
-  const navigate = useNavigate();
-  const { convertPrice } = useApp();
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
-  // Generate pseudo-random but consistent coordinates based on property id
-  const getCoordinates = (property: Property) => {
-    // Use property id to generate a stable random-like number
-    const seed = parseInt(property.id, 10) || 0;
-    
-    // Generate coordinates in different parts of the world based on property type
-    let baseLat = 0;
-    let baseLng = 0;
-    
-    switch(property.type) {
+  // Function to get property color based on type
+  const getPropertyColor = (type: PropertyType): string => {
+    switch (type) {
       case 'villa':
-        baseLat = 34; // Southern Europe
-        baseLng = -5;
-        break;
+        return '#FF5A5F';
       case 'apartment':
-        baseLat = 40; // North America
-        baseLng = -80;
-        break;
-      case 'cabin':
-        baseLat = 60; // Northern Europe
-        baseLng = 10;
-        break;
-      case 'chalet':
-        baseLat = 46; // Alps
-        baseLng = 8;
-        break;
+        return '#00A699';
+      case 'house':
+        return '#FC642D';
+      case 'penthouse':
+        return '#6E7A8A';
+      case 'resort':
+        return '#FFAA42';
       default:
-        baseLat = 25;
-        baseLng = -80;
+        return '#484848';
     }
-    
-    // Use the seed to create some variation
-    const lat = baseLat + (((seed * 13) % 20) - 10) * 0.5;
-    const lng = baseLng + (((seed * 7) % 40) - 20) * 0.5;
-    
-    return { lat, lng };
   };
 
   useEffect(() => {
+    // Get user's location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { longitude, latitude } = position.coords;
+          setUserLocation([longitude, latitude]);
+        },
+        (error) => {
+          console.error("Error getting user location:", error);
+        }
+      );
+    }
+
     if (!mapContainer.current) return;
 
-    mapboxgl.accessToken = MAPBOX_TOKEN;
-    
+    // Initialize map
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/light-v11',
-      center: [0, 20], // Center of the world
-      zoom: 1.5
+      center: center,
+      zoom: zoom,
     });
 
+    // Add navigation controls
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-    return () => {
-      map.current?.remove();
-    };
-  }, []);
+    // Add markers for properties when map loads
+    map.current.on('load', () => {
+      // Add property markers
+      properties.forEach((property) => {
+        if (property.location) {
+          const el = document.createElement('div');
+          el.className = 'property-marker';
+          el.style.width = '24px';
+          el.style.height = '24px';
+          el.style.borderRadius = '50%';
+          el.style.backgroundColor = getPropertyColor(property.type);
+          el.style.cursor = 'pointer';
+          el.style.border = '2px solid white';
+          el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
 
-  useEffect(() => {
-    if (!map.current) return;
+          // Create a popup
+          const popup = new mapboxgl.Popup({ offset: 25 })
+            .setHTML(`
+              <div style="max-width:200px;">
+                <strong>${property.name}</strong>
+                <p>${property.location.address}</p>
+                <p>$${property.price} per night</p>
+              </div>
+            `);
 
-    // Clear existing markers
-    markersRef.current.forEach(marker => marker.remove());
-    markersRef.current = [];
+          // Create a marker
+          const marker = new mapboxgl.Marker(el)
+            .setLngLat([property.location.longitude, property.location.latitude])
+            .setPopup(popup)
+            .addTo(map.current!);
 
-    // Add markers for each property
-    properties.forEach(property => {
-      const { lat, lng } = getCoordinates(property);
-
-      // Create a custom marker element
-      const el = document.createElement('div');
-      el.className = 'cursor-pointer transition-transform hover:scale-105';
-      el.innerHTML = `
-        <div class="bg-white p-2 rounded-lg shadow-lg border border-gold-light">
-          <div class="text-gold-dark font-bold">${convertPrice(property.price)}</div>
-          <div class="text-sm max-w-[120px] truncate">${property.name}</div>
-        </div>
-      `;
-
-      el.addEventListener('click', () => {
-        navigate(`/properties/${property.id}`);
+          // Add click event
+          el.addEventListener('click', () => {
+            if (onPropertySelect) {
+              onPropertySelect(property.id);
+            }
+          });
+        }
       });
 
-      const marker = new mapboxgl.Marker(el)
-        .setLngLat([lng, lat])
-        .addTo(map.current!);
+      // Add user location marker if available
+      if (userLocation) {
+        const userEl = document.createElement('div');
+        userEl.className = 'user-location-marker';
+        userEl.style.width = '18px';
+        userEl.style.height = '18px';
+        userEl.style.borderRadius = '50%';
+        userEl.style.backgroundColor = '#4285F4';
+        userEl.style.border = '3px solid white';
+        userEl.style.boxShadow = '0 2px 6px rgba(0,0,0,0.4)';
+        
+        const popup = new mapboxgl.Popup({ offset: 25 })
+          .setHTML('<div><strong>Your Location</strong></div>');
 
-      markersRef.current.push(marker);
+        new mapboxgl.Marker(userEl)
+          .setLngLat(userLocation)
+          .setPopup(popup)
+          .addTo(map.current!);
+      }
     });
 
-    // Fit bounds to include all markers
-    if (markersRef.current.length > 0) {
-      const bounds = new mapboxgl.LngLatBounds();
-      markersRef.current.forEach(marker => {
-        bounds.extend(marker.getLngLat());
-      });
-      map.current.fitBounds(bounds, { padding: 50 });
+    return () => {
+      if (map.current) {
+        map.current.remove();
+      }
+    };
+  }, [properties, center, zoom, onPropertySelect, userLocation]);
+
+  // Check if user location changed and re-center map
+  useEffect(() => {
+    if (map.current && userLocation) {
+      // Optionally re-center map to user location
+      // map.current.flyTo({ center: userLocation, zoom: 10 });
     }
-  }, [properties, navigate, convertPrice]);
+  }, [userLocation]);
 
   return (
-    <div className="relative w-full h-[500px] rounded-lg overflow-hidden shadow-lg">
-      <div ref={mapContainer} className="absolute inset-0" />
+    <div style={{ width: '100%', height, position: 'relative' }}>
+      <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
     </div>
   );
 };

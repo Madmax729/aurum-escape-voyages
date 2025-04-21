@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,7 +23,7 @@ const Profile = () => {
     city: ''
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
     }
@@ -249,8 +249,8 @@ const Profile = () => {
                   <Button className="w-full" onClick={() => navigate('/admin/dashboard')}>
                     Go to Admin Dashboard
                   </Button>
-                  <Button variant="outline" className="w-full">
-                    Manage Properties
+                  <Button variant="outline" className="w-full" onClick={() => navigate('/admin/add-property')}>
+                    List a New Property
                   </Button>
                 </div>
               </div>
