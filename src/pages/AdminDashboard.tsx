@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -321,7 +322,11 @@ const AdminDashboard = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{property.location}</div>
+                      <div className="text-sm text-gray-900">
+                        {typeof property.location === 'string' 
+                          ? property.location 
+                          : `${property.location.address}, ${property.location.city}`}
+                      </div>
                       <div className="text-sm text-gray-500">{property.country}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
