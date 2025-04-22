@@ -121,6 +121,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Login error:', error);
         if (error.message.includes('Email not confirmed')) {
           toast.error('Please confirm your email before logging in');
+        } else if (error.message.includes('Invalid login credentials')) {
+          toast.error('Invalid email or password');
         } else {
           toast.error(error.message || 'Login failed');
         }
